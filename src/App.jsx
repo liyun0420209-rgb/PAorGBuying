@@ -254,25 +254,43 @@ const ProductEditModal = ({ product, onClose, onSave, isDark, theme }) => {
 };
 
 // --- Views ---
-const HomeView = ({ setView, appConfig, isDark, toggleTheme, showNotify }) => {
+// 🔥 修改 1: 在括號裡多加一個 adminList
+const HomeView = ({ setView, appConfig, isDark, toggleTheme, showNotify, adminList }) => {
     const theme = getTheme(appConfig);
+    
     const handleSecretLogin = async (e) => {
       if (e.detail === 3) {
         const shopName = currentShop || 'default';
-        const allowedEmails = SHOP_ADMIN_EMAILS[shopName] || SHOP_ADMIN_EMAILS['default'];
+        
+        // 🔥 修改 2: 這裡改用傳進來的 adminList，並加上防呆機制
+        // 如果沒傳名單進來，就給一個空物件避免報錯
+        const safeList = adminList || {};
+        const allowedEmails = safeList[shopName] || safeList['default'] || [];
+        
+        console.log("正在檢查名單:", allowedEmails); // (除錯用) 可以在 F12 看到誰是管理員
+
         const confirmLogin = confirm(`【團主管理模式】\n您正在登入賣場：${shopName}\n點擊「確定」進行 Google 身分驗證。`);
         if (!confirmLogin) return;
+
         const provider = new GoogleAuthProvider();
         try {
             const result = await signInWithPopup(auth, provider);
-            if (allowedEmails.includes(result.user.email)) {
+            const userEmail = result.user.email;
+            
+            console.log("Google 回傳 Email:", userEmail); // (除錯用) 可以在 F12 看到你登入的 Email
+
+            // 🔥 修改 3: 檢查 Email 是否在名單內
+            if (allowedEmails.includes(userEmail)) {
                 setView('admin');
-                showNotify(`歡迎團主歸來！ (${result.user.email})`);
+                showNotify(`歡迎團主歸來！ (${userEmail})`);
             } else {
                 await signOut(auth);
-                alert(`⛔ 權限不足！\n帳號 ${result.user.email} 不是此賣場的管理員。`);
+                alert(`⛔ 權限不足！\n\n您的帳號：${userEmail}\n此賣場管理員：${allowedEmails.join(', ')}\n\n(請確認 Email 是否有填錯)`);
             }
-        } catch (error) { console.error(error); showNotify('驗證取消或失敗', 'error'); }
+        } catch (error) {
+            console.error(error);
+            showNotify('驗證取消或失敗', 'error');
+        }
       }
     };
 
@@ -1084,7 +1102,7 @@ export default function ProxyGOApp() {
     return (
         <div className={`min-h-screen font-sans ${isDark?'bg-slate-950 text-slate-100':'bg-[#FDFDFD] text-slate-800'}`}>
             {notification && <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-2 border bg-white text-slate-800`}>{notification.msg}</div>}
-            {view === 'home' && <HomeView setView={setView} appConfig={settings} isDark={isDark} toggleTheme={toggleTheme} showNotify={showNotify} />}
+            {view === 'home' && <HomeView setView={setView} appConfig={settings} isDark={isDark} toggleTheme={toggleTheme} showNotify={showNotify} adminList={SHOP_ADMIN_EMAILS} />}
             {/* 🔥 傳入 db 與 appId 給 LoginView 用於註冊 */}
             {view === 'login' && <LoginView setView={setView} customers={customers} setCurrentUserData={setCurrentUserData} showNotify={showNotify} appConfig={settings} isDark={isDark} toggleTheme={toggleTheme} db={db} appId={appId} />}
             {/* 🔥 傳入 orders 給 CheckoutView 進行限購檢查 */}
