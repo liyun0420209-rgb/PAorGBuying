@@ -1,0 +1,46 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 🔥 移除了原本的 'a' 標籤樣式，避免干擾連結顏色 */
+
+/* 🔥 修正的部分在這裡 🔥 */
+body {
+  margin: 0;
+  width: 100%;        /* 確保寬度滿版 */
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* 確保 React 的根容器也是滿高滿寬 */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 🔥 移除了所有 'button' 相關的樣式 */
+/* 因為 App.jsx 裡的 Tailwind class (如 hover:border-emerald-500) 已經處理了主題色 */
+/* 這裡如果保留 button 樣式，會導致顏色被鎖死在紫色，無法變換 */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  /* 移除了 button 背景色的覆蓋 */
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
