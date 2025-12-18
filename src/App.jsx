@@ -1073,6 +1073,33 @@ export default function ProxyGOApp() {
     const [orders, setOrders] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [settings, setSettings] = useState({});
+  // ... 在 const [settings, setSettings] ... 之後貼上這個：
+
+  // 🔥 新增：監聽資料庫的設定檔變更 (Real-time)
+  useEffect(() => {
+    // 定義資料庫路徑：artifacts -> {shopId} -> public -> data -> system_settings -> config
+    // 這是對應你的後台儲存位置
+    const shopName = currentShop || 'default'; // 確保有店鋪名
+    const settingsRef = doc(db, "artifacts", shopName, "public", "data", "system_settings", "config");
+
+    // 開啟監聽器 (onSnapshot)
+    const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log("🔥 成功讀取到設定檔:", docSnap.data()); // 可以在 F12 看到
+        setSettings(prev => ({
+          ...prev,           // 保留原本的預設值
+          ...docSnap.data()  // 用資料庫的數據覆蓋它
+        }));
+      } else {
+        console.log("⚠️ 設定檔不存在，使用預設值");
+      }
+    }, (error) => {
+      console.error("讀取設定失敗:", error);
+    });
+
+    // 當使用者離開或切換店鋪時，取消監聽
+    return () => unsubscribe();
+  }, [currentShop]); // 只要店鋪換了，就重新執行
     const [localMode, setLocalMode] = useState(localStorage.getItem('theme_mode'));
     const toggleTheme = () => { const m = (localMode==='dark'||(!localMode&&settings.theme_mode==='dark'))?'light':'dark'; setLocalMode(m); localStorage.setItem('theme_mode', m); };
     const isDark = localMode ? localMode==='dark' : settings.theme_mode==='dark';
