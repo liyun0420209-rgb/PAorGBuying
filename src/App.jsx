@@ -32,7 +32,8 @@ const db = getFirestore(app);
 // --- 🔥 多店舖與權限設定 ---
 const urlParams = new URLSearchParams(window.location.search);
 const currentShop = urlParams.get('shop'); 
-const appId = currentShop ? `group-buy-${currentShop}` : (typeof __app_id !== 'undefined' ? __app_id : 'group-buy-demo');
+// ✅ 統一改成簡單的店名，沒有 shop 就叫 default
+const appId = currentShop || 'default';
 
 // 🔴 設定每家店的「管理員 Email」
 const SHOP_ADMIN_EMAILS = {
