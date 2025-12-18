@@ -878,7 +878,19 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
       await Promise.all(promises); showNotify(`計算完成！已更新/拆分訂單`); setCalcData({ totalFee: 0, misc: 0 }); setSelectedProductIds([]); setProductWeights({}); setShippingConfig({});
     } catch (e) { console.error(e); showNotify('更新失敗', 'error'); }
   };
-  const handleSaveSettings = async () => { try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_settings', 'config'), localSettings); showNotify('設定已儲存'); } catch(e) { showNotify('儲存失敗', 'error'); } };
+  // 🔍 替換這個函式來抓蟲
+  const handleSaveSettings = async () => { 
+    console.log("🚀 準備儲存設定...", localSettings); // 1. 檢查資料長怎樣
+    try { 
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_settings', 'config'), localSettings); 
+      showNotify('設定已儲存'); 
+      console.log("✅ 儲存成功！");
+    } catch(e) { 
+      console.error("❌ 儲存失敗的真正原因：", e); // 2. 把錯誤印出來！
+      alert("儲存失敗！原因：" + e.message); // 3. 直接跳視窗告訴你
+      showNotify('儲存失敗', 'error'); 
+    } 
+  };
   const handleImageUpload = (e, field) => { const file = e.target.files[0]; if (!file) return; compressImage(file).then(base64 => { if(field === 'home_banner') setLocalSettings({...localSettings, home_banner_url: base64}); }); };
 
   return (
