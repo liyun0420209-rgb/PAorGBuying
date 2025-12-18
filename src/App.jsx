@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // 👈 確保有 useEffect
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, collection, addDoc, updateDoc, doc, 
-  query, where, onSnapshot, serverTimestamp, setDoc, getDocs, deleteDoc
-} from 'firebase/firestore';
+  getFirestore, collection, addDoc, getDocs, 
+  query, where, orderBy, deleteDoc, doc, updateDoc, 
+  onSnapshot, serverTimestamp // 👈 🔥 確保這裡有 onSnapshot 和 doc
+} from 'firebase/firestore'; 
 import { 
   getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
   GoogleAuthProvider, signInWithPopup, signOut 
@@ -1073,8 +1074,6 @@ export default function ProxyGOApp() {
     const [orders, setOrders] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [settings, setSettings] = useState({});
-  // ... 在 const [settings, setSettings] ... 之後貼上這個：
-
   // 🔥 新增：監聽資料庫的設定檔變更 (Real-time)
   useEffect(() => {
     // 定義資料庫路徑：artifacts -> {shopId} -> public -> data -> system_settings -> config
@@ -1115,14 +1114,13 @@ export default function ProxyGOApp() {
     }, []);
 
     useEffect(() => {
-        // 🔥 注意：這裡的 appId 已經是根據網址動態決定的了 (group-buy-alice / group-buy-bob)
+        // 🔥 注意：這裡的 appId 已經是根據網址動態決定的了
         if(!user) return;
         const unsubP = onSnapshot(collection(db,'artifacts',appId,'public','data','products'), s=>setProducts(s.docs.map(d=>({id:d.id,...d.data()}))));
         const unsubO = onSnapshot(collection(db,'artifacts',appId,'public','data','orders'), s=>setOrders(s.docs.map(d=>({id:d.id,...d.data()}))));
         const unsubC = onSnapshot(collection(db,'artifacts',appId,'public','data','customers'), s=>setCustomers(s.docs.map(d=>({id:d.id,...d.data()}))));
-        const unsubS = onSnapshot(doc(db,'artifacts',appId,'public','data','system_settings','config'), s=>s.exists()&&setSettings(s.data()));
-        return () => { unsubP(); unsubO(); unsubC(); unsubS(); };
-    }, [user, appId]); // 🔥 依賴 appId 改變時重新連線資料庫
+        return () => { unsubP(); unsubO(); unsubC();};
+    }, [user, appId]);
 
     const showNotify = (msg, type='success') => { setNotification({msg, type}); setTimeout(()=>setNotification(null), 3000); };
 
