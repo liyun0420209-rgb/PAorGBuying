@@ -3,8 +3,9 @@ import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, addDoc, getDocs, 
   query, where, orderBy, deleteDoc, doc, updateDoc, 
-  onSnapshot, serverTimestamp // 👈 🔥 確保這裡有 onSnapshot 和 doc
-} from 'firebase/firestore'; 
+  onSnapshot, serverTimestamp, 
+  setDoc
+} from 'firebase/firestore';
 import { 
   getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
   GoogleAuthProvider, signInWithPopup, signOut 
