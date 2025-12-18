@@ -37,7 +37,7 @@ const appId = currentShop ? `group-buy-${currentShop}` : (typeof __app_id !== 'u
 // 🔴 設定每家店的「管理員 Email」
 const SHOP_ADMIN_EMAILS = {
   'kelly': ['w0910089324@gmail.com'],       
-  'default': ['liyun0420209@gmail.com'] 
+  'default': ['liyun0420209@gmail.com','popo226353@gmail.com'] 
 };
 
 // --- Global Constants & Types ---
