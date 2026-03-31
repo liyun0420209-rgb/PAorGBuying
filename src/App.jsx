@@ -617,7 +617,7 @@ const CheckoutView = ({ setView, products, customers, orders, db, appId, showNot
                      <div className={getCardStyle(isDark)}>
                          <h3 className={`text-xl font-bold mb-4 ${getTextStyle(isDark)}`}>購買須知</h3>
                          <div className="p-4 rounded-2xl border mb-4 text-sm opacity-80 whitespace-pre-wrap">{appConfig?.agreement_text || "請閱讀條款..."}</div>
-                         <div onClick={()=>setAgreed(!agreed)} className="flex items-center gap-2 cursor-pointer font-bold"><div className={`w-5 h-5 border rounded flex items-center justify-center ${agreed?'bg-emerald-500 border-emerald-500 text-white':''}`}>{agreed && <CheckCircle className="w-3 h-3"/>}</div>我同意</div>
+                         <div onClick={()=>setAgreed(!agreed)} className="flex items-center gap-2 cursor-pointer font-bold"><div className={`w-5 h-5 border rounded flex items-center justify-center ${agreed?'bg-emerald-500 border-emerald-500 text-white':''}`}>{agreed && <CheckCircle className="w-3 h-3"/>}</div>本人確認已年滿18歲，並已詳細閱讀、充分理解且同意遵守上述契約之所有條款與規定。</div>
                      </div>
                      <button disabled={!agreed} onClick={()=>setStep(1)} className={getBtnPrimary(theme)}>開始選購</button>
                  </div>
