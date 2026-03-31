@@ -63,19 +63,18 @@ const DEFAULT_ID_RULES = {
   random_length: 4
 };
 
-// --- 🎨 莫蘭迪 / 低飽和質感色系 ---
 const THEMES = {
-  stone:  { label: '燕麥奶茶', primary: 'stone' },  // 帶有暖色調的灰棕色，非常溫柔
-  slate:  { label: '霧霾藍',   primary: 'slate' },  // 帶灰階的藍色，沉穩專業
-  teal:   { label: '鼠尾草綠', primary: 'teal' },   // 比 emerald 更暗沉、更具質感的綠
-  rose:   { label: '乾燥玫瑰', primary: 'rose' },   // 玫瑰粉本身自帶一點灰調，優雅不刺眼
-  zinc:   { label: '極簡冷灰', primary: 'zinc' },   // 現代感十足的冷灰色
-  emerald: { label: '海棠綠', primary: 'emerald' }
+  emerald: { label: '海棠綠', primary: 'emerald' },
+  blue:    { label: '海洋藍', primary: 'blue' },
+  rose:    { label: '玫瑰粉', primary: 'rose' },
+  violet:  { label: '紫羅蘭', primary: 'violet' },
+  amber:   { label: '暖陽橘', primary: 'amber' },
 };
 
 // --- Styles Helpers ---
 const getTheme = (config) => THEMES[config?.theme_color] || THEMES.emerald;
-const getBtnPrimary = (t) => `w-full py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-${t.primary}-400 to-${t.primary}-600 shadow-lg shadow-${t.primary}-200/50 active:scale-95 transition-all hover:brightness-110 hover:shadow-${t.primary}-300/50 flex items-center justify-center gap-2`;
+// 👇 柔和版主按鈕 (使用 300~400 的低飽和漸層)
+const getBtnPrimary = (t) => `w-full py-4 rounded-2xl font-bold text-slate-800 bg-gradient-to-r from-${t.primary}-300 to-${t.primary}-400 shadow-lg shadow-${t.primary}-200/50 active:scale-95 transition-all hover:brightness-105 flex items-center justify-center gap-2`;
 const getBtnSecondary = (isDark, t) => `w-full py-4 rounded-2xl font-bold border-2 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 ${isDark ? `text-slate-300 bg-slate-800 border-slate-700 hover:border-${t.primary}-700 hover:bg-${t.primary}-900/30 hover:text-${t.primary}-400` : `text-slate-600 bg-white border-slate-200 hover:border-${t.primary}-200 hover:bg-${t.primary}-50 hover:text-${t.primary}-600`}`;
 const getInputStyle = (t, isDark) => isDark ? `w-full p-4 bg-slate-900 border-2 border-slate-700 rounded-2xl focus:border-${t.primary}-500 focus:ring-1 focus:ring-${t.primary}-500 text-slate-100 placeholder-slate-500 transition-all outline-none font-bold tracking-wide shadow-inner` : `w-full p-4 bg-white border-2 border-slate-200 rounded-2xl focus:border-${t.primary}-400 focus:ring-4 focus:ring-${t.primary}-100 transition-all outline-none font-bold text-slate-700 placeholder-slate-400 tracking-wide shadow-sm hover:border-slate-300`;
 const getCardStyle = (isDark) => isDark ? "bg-slate-900/80 backdrop-blur-xl border border-slate-800 shadow-xl shadow-black/20 rounded-3xl p-5 transition-all duration-300" : "bg-white/80 backdrop-blur-xl border border-white/50 shadow-xl shadow-slate-200/50 rounded-3xl p-5 hover:shadow-2xl transition-all duration-300";
