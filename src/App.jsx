@@ -534,9 +534,16 @@ const CheckoutView = ({ setView, products, customers, orders, db, appId, showNot
     };
 
     const handleCheckoutAction = async () => {
-        // 🔥 強制登入檢查
+        // 🔥 1. 強制登入檢查
         if (!user || user.isAnonymous) return showNotify('請先登入會員', 'error');
-        if (!form.phone || form.phone.length < 10) return showNotify('請輸入正確的手機號碼', 'error');
+        
+        // 🔥 2. 嚴格必填防呆檢查 (新增這段)
+        if (!form.phone || form.phone.length < 10) return showNotify('請輸入完整 10 碼手機號碼', 'error');
+        if (!form.line_nickname || form.line_nickname.trim() === '') return showNotify('請輸入 Line 暱稱', 'error');
+        if (!form.ig_account || form.ig_account.trim() === '') return showNotify('請輸入 IG 帳號', 'error');
+        if (!form.last_5_digits || form.last_5_digits.length < 5) return showNotify('請輸入完整的匯款後 5 碼', 'error');
+
+        // ... 下面保留你原本寫入資料庫的 try { ... } 邏輯 ...
 
         try {
             let cust = customers.find(c => c.email === user.email);
@@ -696,10 +703,10 @@ const CheckoutView = ({ setView, products, customers, orders, db, appId, showNot
                              {/* 🔥 只有登入後才顯示表單 */}
                              {user && !user.isAnonymous && (
                                 <>
-                                    <div><label className="text-sm font-bold ml-2">手機 (必填)</label><input className={getInputStyle(theme,isDark)} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} maxLength={10} placeholder="請輸入手機號碼"/></div>
-                                    <div><label className="text-sm font-bold ml-2">Line 暱稱</label><input className={getInputStyle(theme,isDark)} value={form.line_nickname} onChange={e=>setForm({...form,line_nickname:e.target.value})}/></div>
-                                    <div><label className="text-sm font-bold ml-2">IG 帳號 (30字內)</label><input className={getInputStyle(theme,isDark)} value={form.ig_account} onChange={e=>{const v=validateIgInput(e.target.value); if(v!==null) setForm({...form,ig_account:v})}}/></div>
-                                    <div><label className="text-sm font-bold ml-2">匯款後 5 碼</label><input className={getInputStyle(theme,isDark)} value={form.last_5_digits} maxLength={5} onChange={e=>setForm({...form,last_5_digits:e.target.value.replace(/\D/g, '')})} /></div>
+                                  <div><label className="text-sm font-bold ml-2 text-rose-500">手機 (必填)</label><input className={getInputStyle(theme,isDark)} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} maxLength={10} placeholder="請輸入手機號碼"/></div>
+                                  <div><label className="text-sm font-bold ml-2 text-rose-500">Line 暱稱 (必填)</label><input className={getInputStyle(theme,isDark)} value={form.line_nickname} onChange={e=>setForm({...form,line_nickname:e.target.value})} placeholder="請輸入 Line 顯示名稱"/></div>
+                                  <div><label className="text-sm font-bold ml-2 text-rose-500">IG 帳號 (30字內，必填)</label><input className={getInputStyle(theme,isDark)} value={form.ig_account} onChange={e=>{const v=validateIgInput(e.target.value); if(v!==null) setForm({...form,ig_account:v})}} placeholder="請輸入 IG 帳號"/></div>
+                                  <div><label className="text-sm font-bold ml-2 text-rose-500">匯款後 5 碼 (必填)</label><input className={getInputStyle(theme,isDark)} value={form.last_5_digits} maxLength={5} onChange={e=>setForm({...form,last_5_digits:e.target.value.replace(/\D/g, '')})} placeholder="請輸入存摺帳號後五碼" /></div>
                                 </>
                              )}
                          </div>
