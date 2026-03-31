@@ -820,7 +820,7 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
     }; checkExpired(); const i = setInterval(checkExpired,60000); return ()=>clearInterval(i);
   }, [products]);
 
-  const filteredOrders = useMemo(() => {
+  
       const filteredOrders = useMemo(() => {
       let result = orders.filter(order => {
           const customer = customers.find(c => (order.customer_email && c.email === order.customer_email) || (order.customer_phone && c.phone === order.customer_phone));
@@ -856,7 +856,7 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
       });
 
       return result;
-  }, [orders, orderFilter, customers, showHistory, listSortBy]); // 👈 記得這裡加上了 listSortBy
+  }, [orders, orderFilter, customers, showHistory, listSortBy]);
 
   const totalFilteredQty = filteredOrders.reduce((acc, curr) => acc + curr.qty, 0);
   const handleAdminUpdateStatus = async (orderId, newStatus) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status: newStatus }); showNotify('狀態已更新'); } catch (e) { showNotify('更新失敗', 'error'); } };
