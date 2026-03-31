@@ -895,20 +895,52 @@ const handleBatchDelete = async () => {
   const handleGenerateExcel = () => {
       const targets = orders.filter(o => o.status === 'pending_2');
       if (targets.length === 0) return showNotify('沒有待二補的訂單');
+      
       const grouped = {};
+      
+      // 1. 把同一個人的訂單與商品明細整理起來
       targets.forEach(o => {
           const customer = customers.find(c => c.phone === o.customer_phone);
           if (!customer) return;
           const key = customer.phone;
-          if (!grouped[key]) { grouped[key] = { customer, totalFee: 0, specs: [] }; }
+          
+          if (!grouped[key]) { 
+              grouped[key] = { customer, totalFee: 0, items: [] }; 
+          }
+          
+          // 累加運費
           grouped[key].totalFee += (o.shipping_fee_due || 0);
-          grouped[key].specs.push(o.spec);
+          
+          // 抓取商品名稱 (優先用快照，沒有才去商品庫查)
+          const productTitle = o.product_title || products.find(p => p.id === o.product_id)?.title || '未知商品';
+          
+          // 檢查這個商品+規格是不是已經在清單裡了
+          const existingItem = grouped[key].items.find(i => i.title === productTitle && i.spec === o.spec);
+          if (existingItem) {
+              existingItem.qty += o.qty; // 如果有，數量相加
+          } else {
+              grouped[key].items.push({ title: productTitle, spec: o.spec, qty: o.qty }); // 沒有就新增
+          }
       });
+
+      // 2. 轉換成 CSV 報表格式
       const exportData = Object.values(grouped).map(group => {
-          let finalPrice = group.totalFee; let note = ''; if (finalPrice < 20) { finalPrice = 20; note = '(內退)'; }
-          const formatName = `${group.customer.line_nickname} (${group.customer.system_id})`; const formatSpec = `${group.specs[0]}等...共${group.specs.length}樣` + note;
+          let finalPrice = group.totalFee; 
+          let note = ''; 
+          if (finalPrice < 20) { finalPrice = 20; note = '(內退)'; } // 賣貨便最低門檻 20 元
+          
+          // ⚠️ 防呆：把字串裡的半形逗號換成全形，以免 CSV 跑版
+          const safeStr = (str) => (str || '').toString().replace(/,/g, '，');
+          
+          const formatName = safeStr(`${group.customer.line_nickname} (${group.customer.system_id})`);
+          
+          // 🔥 核心修改：把陣列組裝成「商品A(規格)x1 + 商品B(規格)x2」的超詳細字串
+          const detailedItemsStr = group.items.map(item => `${item.title}(${item.spec})x${item.qty}`).join(' + ');
+          const formatSpec = safeStr(`${detailedItemsStr} ${note}`);
+          
           return { name: formatSpec, spec: formatName, price: finalPrice, stock: 1 };
       });
+      
       downloadExcel(exportData, `賣貨便二補單_${new Date().toISOString().slice(0,10)}.csv`);
   };
   const handleUpdateProduct = async (newProductData) => { try { if (newProductData.id) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', newProductData.id), newProductData); showNotify('商品更新成功'); } else { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProductData, created_at: serverTimestamp() }); showNotify('商品新增成功'); } setEditingProduct(null); } catch(e) { console.error(e); showNotify('儲存失敗','error'); } };
