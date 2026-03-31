@@ -70,6 +70,7 @@ const THEMES = {
   teal:   { label: '鼠尾草綠', primary: 'teal' },   // 比 emerald 更暗沉、更具質感的綠
   rose:   { label: '乾燥玫瑰', primary: 'rose' },   // 玫瑰粉本身自帶一點灰調，優雅不刺眼
   zinc:   { label: '極簡冷灰', primary: 'zinc' },   // 現代感十足的冷灰色
+  emerald: { label: '海棠綠', primary: 'emerald' }
 };
 
 // --- Styles Helpers ---
