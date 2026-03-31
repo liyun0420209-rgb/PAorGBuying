@@ -801,6 +801,7 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
   const [batchStatus, setBatchStatus] = useState('');
   const [orderFilter, setOrderFilter] = useState({ productId: '', keyword: '' }); 
   const [exportSortBy, setExportSortBy] = useState('buyer');
+  const [listSortBy, setListSortBy] = useState('date_desc'); // 👈 新增這行：控制後台列表的排序
   const [calcData, setCalcData] = useState({ totalFee: 0, misc: 0 });
   const [selectedProductIds, setSelectedProductIds] = useState([]); 
   const [productWeights, setProductWeights] = useState({}); 
@@ -820,18 +821,42 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
   }, [products]);
 
   const filteredOrders = useMemo(() => {
+      const filteredOrders = useMemo(() => {
       let result = orders.filter(order => {
           const customer = customers.find(c => (order.customer_email && c.email === order.customer_email) || (order.customer_phone && c.phone === order.customer_phone));
           const matchProduct = orderFilter.productId ? order.product_id === orderFilter.productId : true;
           const matchKeyword = orderFilter.keyword ? ((customer?.line_nickname || '').includes(orderFilter.keyword) || (customer?.phone || '').includes(orderFilter.keyword) || (customer?.email || '').includes(orderFilter.keyword) || (customer?.system_id || '').includes(orderFilter.keyword) || (order.display_id || '').includes(orderFilter.keyword)) : true;
           return matchProduct && matchKeyword;
       });
-      // 🔥 Filter out completed unless showHistory is true
+      
       if (!showHistory) {
           result = result.filter(o => o.status !== 'completed');
       }
+
+      // 🔥 新增：超強列表排序邏輯
+      result.sort((a, b) => {
+          if (listSortBy === 'buyer') {
+              const cA = customers.find(c => c.email === a.customer_email || c.phone === a.customer_phone);
+              const cB = customers.find(c => c.email === b.customer_email || c.phone === b.customer_phone);
+              const nameA = cA?.line_nickname || '';
+              const nameB = cB?.line_nickname || '';
+              return nameA.localeCompare(nameB, 'zh-TW'); // 依買家名稱排序
+          }
+          if (listSortBy === 'status') {
+              const stepA = STATUS_LABELS[a.status]?.step || 99;
+              const stepB = STATUS_LABELS[b.status]?.step || 99;
+              if (stepA !== stepB) return stepA - stepB;
+              return (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0); // 狀態一樣時，新的排前面
+          }
+          if (listSortBy === 'date_asc') {
+              return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0); // 最舊的排前面
+          }
+          // 預設 date_desc (最新的排前面)
+          return (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0);
+      });
+
       return result;
-  }, [orders, orderFilter, customers, showHistory]);
+  }, [orders, orderFilter, customers, showHistory, listSortBy]); // 👈 記得這裡加上了 listSortBy
 
   const totalFilteredQty = filteredOrders.reduce((acc, curr) => acc + curr.qty, 0);
   const handleAdminUpdateStatus = async (orderId, newStatus) => { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status: newStatus }); showNotify('狀態已更新'); } catch (e) { showNotify('更新失敗', 'error'); } };
@@ -1049,9 +1074,18 @@ const handleBatchDelete = async () => {
                           {selectedOrderIds.size > 0 && (<div className={`flex items-center justify-between p-3 rounded-xl border animate-in slide-in-from-top-2 ${isDark ? 'bg-blue-900/30 border-blue-800' : 'bg-blue-50 border-blue-200'}`}><div className="flex items-center gap-3"><span className={`font-bold ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>已選取 {selectedOrderIds.size} 筆</span><select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)} className={`text-sm p-2 rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}><option value="">選擇狀態...</option>{Object.keys(STATUS_LABELS).map(k => (<option key={k} value={k}>轉為：{STATUS_LABELS[k].text}</option>))}</select><button onClick={handleBatchStatusUpdate} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-bold text-sm hover:bg-blue-600 shadow-sm active:scale-95 transition-all">更新狀態</button><button onClick={handleBatchDelete} className="px-4 py-2 bg-rose-500 text-white rounded-lg font-bold text-sm hover:bg-rose-600 shadow-sm active:scale-95 transition-all ml-1">批量刪除</button></div><button onClick={() => setSelectedOrderIds(new Set())} className="text-sm opacity-60 hover:opacity-100">取消選取</button></div>)}
                           <div className={`${getCardStyle(isDark)} flex flex-col lg:flex-row gap-4`}>
                               <div className="flex-1 flex flex-col sm:flex-row gap-3">
-                                   <div className="relative flex-1"><select className={`${getInputStyle(theme, isDark)} pl-10`} value={orderFilter.productId} onChange={(e) => setOrderFilter({...orderFilter, productId: e.target.value})}><option value="">全部商品 ({products.length})</option>{products.map(p => (<option key={p.id} value={p.id}>{p.title}</option>))}</select><Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /></div>
-                                   <div className="relative flex-1"><input type="text" placeholder="搜尋買家" className={`${getInputStyle(theme, isDark)} pl-10`} value={orderFilter.keyword} onChange={(e) => setOrderFilter({...orderFilter, keyword: e.target.value})}/><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />{orderFilter.keyword && (<button onClick={() => setOrderFilter({...orderFilter, keyword: ''})} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4"/></button>)}</div>
-                              </div>
+    <div className="relative flex-1"><select className={`${getInputStyle(theme, isDark)} pl-10`} value={orderFilter.productId} onChange={(e) => setOrderFilter({...orderFilter, productId: e.target.value})}><option value="">全部商品 ({products.length})</option>{products.map(p => (<option key={p.id} value={p.id}>{p.title}</option>))}</select><Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /></div>
+    <div className="relative flex-1"><input type="text" placeholder="搜尋關鍵字" className={`${getInputStyle(theme, isDark)} pl-10`} value={orderFilter.keyword} onChange={(e) => setOrderFilter({...orderFilter, keyword: e.target.value})}/><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />{orderFilter.keyword && (<button onClick={() => setOrderFilter({...orderFilter, keyword: ''})} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X className="w-4 h-4"/></button>)}</div>
+    {/* 👇 新增的：列表專用排序下拉選單 */}
+    <div className="relative flex-1 sm:max-w-[180px]">
+        <select className={`${getInputStyle(theme, isDark)}`} value={listSortBy} onChange={(e) => setListSortBy(e.target.value)}>
+            <option value="date_desc">🕒 最新優先</option>
+            <option value="date_asc">🕒 最舊優先</option>
+            <option value="buyer">👤 依買家排序</option>
+            <option value="status">📊 依狀態排序</option>
+        </select>
+    </div>
+</div>
                               <div className={`flex items-center justify-between lg:justify-start gap-6 px-0 lg:px-6 lg:border-l pt-2 lg:pt-0 border-t lg:border-t-0 ${isDark ? 'border-slate-700' : 'border-slate-100'}`}><div className="text-center"><div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">顯示訂單</div><div className={`font-black text-xl ${getTextStyle(isDark)}`}>{filteredOrders.length} <span className="text-sm font-normal text-slate-400">筆</span></div></div><div className="text-center"><div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">商品總數</div><div className={`font-black text-xl text-${theme.primary}-500`}>{totalFilteredQty} <span className={`text-sm font-normal text-${theme.primary}-300`}>個</span></div></div></div>
                           </div>
                       </div>
