@@ -63,12 +63,13 @@ const DEFAULT_ID_RULES = {
   random_length: 4
 };
 
+// --- 🎨 莫蘭迪 / 低飽和質感色系 ---
 const THEMES = {
-  emerald: { label: '海棠綠', primary: 'emerald' },
-  blue:    { label: '海洋藍', primary: 'blue' },
-  rose:    { label: '玫瑰粉', primary: 'rose' },
-  violet:  { label: '紫羅蘭', primary: 'violet' },
-  amber:   { label: '暖陽橘', primary: 'amber' },
+  stone:  { label: '燕麥奶茶', primary: 'stone' },  // 帶有暖色調的灰棕色，非常溫柔
+  slate:  { label: '霧霾藍',   primary: 'slate' },  // 帶灰階的藍色，沉穩專業
+  teal:   { label: '鼠尾草綠', primary: 'teal' },   // 比 emerald 更暗沉、更具質感的綠
+  rose:   { label: '乾燥玫瑰', primary: 'rose' },   // 玫瑰粉本身自帶一點灰調，優雅不刺眼
+  zinc:   { label: '極簡冷灰', primary: 'zinc' },   // 現代感十足的冷灰色
 };
 
 // --- Styles Helpers ---
