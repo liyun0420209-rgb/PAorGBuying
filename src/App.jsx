@@ -893,55 +893,54 @@ const handleBatchDelete = async () => {
   const toggleOrderSelection = (id) => { const next = new Set(selectedOrderIds); if (next.has(id)) next.delete(id); else next.add(id); setSelectedOrderIds(next); };
   const toggleAllFilteredOrders = () => { if (selectedOrderIds.size === filteredOrders.length) { setSelectedOrderIds(new Set()); } else { setSelectedOrderIds(new Set(filteredOrders.map(o => o.id))); } };
   const handleGenerateExcel = () => {
-      const targets = orders.filter(o => o.status === 'pending_2');
-      if (targets.length === 0) return showNotify('沒有待二補的訂單');
+      // 1. 直接使用畫面上已經過濾好的訂單 (這樣你搜尋特定商品就能只匯出該商品)
+      const targets = filteredOrders;
+      if (targets.length === 0) return showNotify('沒有可匯出的訂單', 'error');
       
       const grouped = {};
       
-      // 1. 把同一個人的訂單與商品明細整理起來
+      // 2. 整理資料：同買家、同商品、同規格的數量合併
       targets.forEach(o => {
-          const customer = customers.find(c => c.phone === o.customer_phone);
-          if (!customer) return;
-          const key = customer.phone;
-          
-          if (!grouped[key]) { 
-              grouped[key] = { customer, totalFee: 0, items: [] }; 
-          }
-          
-          // 累加運費
-          grouped[key].totalFee += (o.shipping_fee_due || 0);
-          
-          // 抓取商品名稱 (優先用快照，沒有才去商品庫查)
+          const customer = customers.find(c => (o.customer_email && c.email === o.customer_email) || (o.customer_phone && c.phone === o.customer_phone));
+          const buyerName = customer?.line_nickname || '未知買家';
           const productTitle = o.product_title || products.find(p => p.id === o.product_id)?.title || '未知商品';
+          const spec = o.spec || '單一規格';
           
-          // 檢查這個商品+規格是不是已經在清單裡了
-          const existingItem = grouped[key].items.find(i => i.title === productTitle && i.spec === o.spec);
-          if (existingItem) {
-              existingItem.qty += o.qty; // 如果有，數量相加
-          } else {
-              grouped[key].items.push({ title: productTitle, spec: o.spec, qty: o.qty }); // 沒有就新增
+          // 用 買家+商品+規格 當作獨一無二的鑰匙
+          const key = `${buyerName}_${productTitle}_${spec}`;
+          if (!grouped[key]) { 
+              grouped[key] = { 
+                  buyer: buyerName, 
+                  item: `${productTitle} (${spec})`, 
+                  qty: 0 
+              }; 
           }
+          
+          grouped[key].qty += o.qty;
       });
 
-      // 2. 轉換成 CSV 報表格式
-      const exportData = Object.values(grouped).map(group => {
-          let finalPrice = group.totalFee; 
-          let note = ''; 
-          if (finalPrice < 20) { finalPrice = 20; note = '(內退)'; } // 賣貨便最低門檻 20 元
-          
-          // ⚠️ 防呆：把字串裡的半形逗號換成全形，以免 CSV 跑版
-          const safeStr = (str) => (str || '').toString().replace(/,/g, '，');
-          
-          const formatName = safeStr(`${group.customer.line_nickname} (${group.customer.system_id})`);
-          
-          // 🔥 核心修改：把陣列組裝成「商品A(規格)x1 + 商品B(規格)x2」的超詳細字串
-          const detailedItemsStr = group.items.map(item => `${item.title}(${item.spec})x${item.qty}`).join(' + ');
-          const formatSpec = safeStr(`${detailedItemsStr} ${note}`);
-          
-          return { name: formatSpec, spec: formatName, price: finalPrice, stock: 1 };
+      // 3. 建立 CSV 檔案內容 (加上 BOM 確保 Excel 打開中文不會亂碼)
+      const BOM = '\uFEFF';
+      let csvContent = BOM + "買家,商品/規格,數量\n"; // 👈 你要的自訂表頭
+
+      // 4. 填入資料 (加入防呆機制：如果名字或商品裡有逗號，用雙引號包起來防跑版)
+      Object.values(grouped).forEach(row => {
+          const safeBuyer = `"${row.buyer.replace(/"/g, '""')}"`;
+          const safeItem = `"${row.item.replace(/"/g, '""')}"`;
+          csvContent += `${safeBuyer},${safeItem},${row.qty}\n`;
       });
+
+      // 5. 觸發瀏覽器下載
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a"); 
+      link.href = url; 
+      link.download = `理貨明細表_${new Date().toISOString().slice(0,10)}.csv`; 
+      document.body.appendChild(link); 
+      link.click(); 
+      document.body.removeChild(link);
       
-      downloadExcel(exportData, `賣貨便二補單_${new Date().toISOString().slice(0,10)}.csv`);
+      showNotify('理貨報表匯出成功！📦');
   };
   const handleUpdateProduct = async (newProductData) => { try { if (newProductData.id) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', newProductData.id), newProductData); showNotify('商品更新成功'); } else { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProductData, created_at: serverTimestamp() }); showNotify('商品新增成功'); } setEditingProduct(null); } catch(e) { console.error(e); showNotify('儲存失敗','error'); } };
   const handleToggleStatus = async (p) => { const newStatus = p.status === 'open' ? 'closed' : 'open'; await updateDoc(doc(db,'artifacts',appId,'public','data','products',p.id), {status: newStatus}); showNotify(`已切換為${newStatus==='open'?'開團中':'已截止'}`); };
