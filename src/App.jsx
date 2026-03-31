@@ -1127,14 +1127,19 @@ export default function ProxyGOApp() {
         onAuthStateChanged(auth, setUser); 
     }, []);
 
-    useEffect(() => {
-        // 🔥 注意：這裡的 appId 已經是根據網址動態決定的了
-        if(!user) return;
-        const unsubP = onSnapshot(collection(db,'artifacts',appId,'public','data','products'), s=>setProducts(s.docs.map(d=>({id:d.id,...d.data()}))));
-        const unsubO = onSnapshot(collection(db,'artifacts',appId,'public','data','orders'), s=>setOrders(s.docs.map(d=>({id:d.id,...d.data()}))));
-        const unsubC = onSnapshot(collection(db,'artifacts',appId,'public','data','customers'), s=>setCustomers(s.docs.map(d=>({id:d.id,...d.data()}))));
-        return () => { unsubP(); unsubO(); unsubC();};
-    }, [user, appId]);
+   // 🔓 第一道門：【商品】是公開的，不需要管 user 有沒有登入，一律抓取
+    useEffect(() => {
+        const unsubP = onSnapshot(collection(db,'artifacts',appId,'public','data','products'), s=>setProducts(s.docs.map(d=>({id:d.id,...d.data()}))));
+        return () => unsubP();
+    }, [appId]); // 依賴陣列把 user 拿掉
+
+    // 🔐 第二道門：【訂單】與【會員資料】是私密的，必須等 user 登入後才抓取
+    useEffect(() => {
+        if(!user || user.isAnonymous) return; // 沒登入就擋下來
+        const unsubO = onSnapshot(collection(db,'artifacts',appId,'public','data','orders'), s=>setOrders(s.docs.map(d=>({id:d.id,...d.data()}))));
+        const unsubC = onSnapshot(collection(db,'artifacts',appId,'public','data','customers'), s=>setCustomers(s.docs.map(d=>({id:d.id,...d.data()}))));
+        return () => { unsubO(); unsubC();};
+    }, [user, appId]);
 
     const showNotify = (msg, type='success') => { setNotification({msg, type}); setTimeout(()=>setNotification(null), 3000); };
 
