@@ -800,6 +800,7 @@ const AdminView = ({ setView, orders, products, customers, db, appId, showNotify
   const [selectedOrderIds, setSelectedOrderIds] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState('');
   const [orderFilter, setOrderFilter] = useState({ productId: '', keyword: '' }); 
+  const [exportSortBy, setExportSortBy] = useState('buyer');
   const [calcData, setCalcData] = useState({ totalFee: 0, misc: 0 });
   const [selectedProductIds, setSelectedProductIds] = useState([]); 
   const [productWeights, setProductWeights] = useState({}); 
@@ -921,26 +922,45 @@ const handleBatchDelete = async () => {
 
       // 3. 建立 CSV 檔案內容 (加上 BOM 確保 Excel 打開中文不會亂碼)
       const BOM = '\uFEFF';
-      let csvContent = BOM + "買家,商品/規格,數量\n"; // 👈 你要的自訂表頭
+      let csvContent = BOM + "買家,商品/規格,數量\n"; 
 
-      // 4. 填入資料 (加入防呆機制：如果名字或商品裡有逗號，用雙引號包起來防跑版)
-      Object.values(grouped).forEach(row => {
+      // 🔥 4. 把資料轉成陣列，並根據你的選擇進行排序！
+      const exportArray = Object.values(grouped);
+      
+      exportArray.sort((a, b) => {
+          if (exportSortBy === 'buyer') {
+              // 依買家排序：買家名字一樣時，再排商品
+              if (a.buyer === b.buyer) return a.item.localeCompare(b.item, 'zh-TW');
+              return a.buyer.localeCompare(b.buyer, 'zh-TW');
+          } else {
+              // 依商品排序：商品名字一樣時，再排買家
+              if (a.item === b.item) return a.buyer.localeCompare(b.buyer, 'zh-TW');
+              return a.item.localeCompare(b.item, 'zh-TW');
+          }
+      });
+
+      // 5. 將排序好的資料填入 CSV (包含防呆雙引號)
+      exportArray.forEach(row => {
           const safeBuyer = `"${row.buyer.replace(/"/g, '""')}"`;
           const safeItem = `"${row.item.replace(/"/g, '""')}"`;
           csvContent += `${safeBuyer},${safeItem},${row.qty}\n`;
       });
 
-      // 5. 觸發瀏覽器下載
+      // 6. 觸發瀏覽器下載
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); 
       link.href = url; 
-      link.download = `理貨明細表_${new Date().toISOString().slice(0,10)}.csv`; 
+      
+      // 讓檔名也跟著變聰明，提醒你這份是怎麼排的
+      const sortName = exportSortBy === 'buyer' ? '依買家' : '依商品';
+      link.download = `理貨明細表(${sortName})_${new Date().toISOString().slice(0,10)}.csv`; 
+      
       document.body.appendChild(link); 
       link.click(); 
       document.body.removeChild(link);
       
-      showNotify('理貨報表匯出成功！📦');
+      showNotify(`理貨報表 (${sortName}) 匯出成功！📦`);
   };
   const handleUpdateProduct = async (newProductData) => { try { if (newProductData.id) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', newProductData.id), newProductData); showNotify('商品更新成功'); } else { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProductData, created_at: serverTimestamp() }); showNotify('商品新增成功'); } setEditingProduct(null); } catch(e) { console.error(e); showNotify('儲存失敗','error'); } };
   const handleToggleStatus = async (p) => { const newStatus = p.status === 'open' ? 'closed' : 'open'; await updateDoc(doc(db,'artifacts',appId,'public','data','products',p.id), {status: newStatus}); showNotify(`已切換為${newStatus==='open'?'開團中':'已截止'}`); };
@@ -1010,7 +1030,20 @@ const handleBatchDelete = async () => {
                                   <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border transition-all ${showHistory ? (isDark ? 'bg-slate-800 text-slate-300 border-slate-600' : 'bg-slate-100 text-slate-600 border-slate-300') : 'opacity-70 hover:opacity-100 border-transparent'}`}>
                                       <History className="w-4 h-4"/> {showHistory ? '隱藏已完成' : '查看歷史紀錄'}
                                   </button>
-                                  <button onClick={handleGenerateExcel} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${isDark ? `bg-${theme.primary}-900/30 text-${theme.primary}-400` : `bg-${theme.primary}-100 text-${theme.primary}-600`}`}><Download className="w-4 h-4"/> 匯出報表</button>
+                                  {/* 👇 加上排序下拉選單與原本的匯出按鈕 */}
+<div className="flex items-center gap-2">
+    <select 
+        value={exportSortBy} 
+        onChange={(e) => setExportSortBy(e.target.value)} 
+        className={`text-sm py-2 px-3 rounded-xl border font-bold outline-none transition-all ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300 focus:border-blue-500' : 'bg-white border-slate-200 text-slate-600 focus:border-blue-400'}`}
+    >
+        <option value="buyer">👤 依「買家」排序</option>
+        <option value="item">📦 依「商品」排序</option>
+    </select>
+    <button onClick={handleGenerateExcel} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-sm active:scale-95 transition-all ${isDark ? `bg-${theme.primary}-900/40 text-${theme.primary}-400 border border-${theme.primary}-800` : `bg-${theme.primary}-100 text-${theme.primary}-600`}`}>
+        <Download className="w-4 h-4"/> 匯出報表
+    </button>
+</div>
                               </div>
                           </div>
                           {selectedOrderIds.size > 0 && (<div className={`flex items-center justify-between p-3 rounded-xl border animate-in slide-in-from-top-2 ${isDark ? 'bg-blue-900/30 border-blue-800' : 'bg-blue-50 border-blue-200'}`}><div className="flex items-center gap-3"><span className={`font-bold ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>已選取 {selectedOrderIds.size} 筆</span><select value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)} className={`text-sm p-2 rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}><option value="">選擇狀態...</option>{Object.keys(STATUS_LABELS).map(k => (<option key={k} value={k}>轉為：{STATUS_LABELS[k].text}</option>))}</select><button onClick={handleBatchStatusUpdate} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-bold text-sm hover:bg-blue-600 shadow-sm active:scale-95 transition-all">更新狀態</button><button onClick={handleBatchDelete} className="px-4 py-2 bg-rose-500 text-white rounded-lg font-bold text-sm hover:bg-rose-600 shadow-sm active:scale-95 transition-all ml-1">批量刪除</button></div><button onClick={() => setSelectedOrderIds(new Set())} className="text-sm opacity-60 hover:opacity-100">取消選取</button></div>)}
